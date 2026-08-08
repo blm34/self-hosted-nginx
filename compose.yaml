@@ -1,40 +1,58 @@
 services:
   nginx:
     container_name: nginx
-    image: 'nginxproxy/nginx-proxy:1.11'
+    image: 'nginxproxy/nginx-proxy:1.11.6'
     restart: unless-stopped
+
     environment:
       TRUST_DOWNSTREAM_PROXY: "false"
+
     ports:
       - '80:80' # Public HTTP Port
       - '443:443' # Public HTTPS Port
+
     volumes:
       - ./data/certs:/etc/nginx/certs
       - ./data/html:/usr/share/nginx/html
       - /var/run/docker.sock:/tmp/docker.sock:ro
+
     labels:
-      - com.github.nginx-proxy.nginx
+      com.github.nginx-proxy.nginx: ""
+      wud.trigger.include: ntfy.local,dockercompose.nginx
+      wud.tag.include: ^\d+\.\d+\.\d+$
+      wud.compose.file: /wud/nginx/compose.yaml
+
     healthcheck:
       test: ["CMD", "nginx", "-t"]
       interval: 30s
       timeout: 5s
       retries: 3
       start_period: 10s
+
     networks:
       - nginx-proxy-net
 
   nginx-acme:
     container_name: nginx-acme
-    image: 'nginxproxy/acme-companion:2.7'
+    image: 'nginxproxy/acme-companion:2.8.2'
     restart: unless-stopped
+
+    labels:
+      wud.trigger.include: ntfy.local,dockercompose.nginxacme
+      wud.tag.include: ^\d+\.\d+\.\d+$
+      wud.compose.file: /wud/nginx/compose.yaml
+
     depends_on:
       - "nginx"
+
     environment:
       DEFAULT_EMAIL: ${EMAIL}
+
     volumes:
       - ./data/certs:/etc/nginx/certs
       - ./data/html:/usr/share/nginx/html
       - /var/run/docker.sock:/var/run/docker.sock:ro
+
     networks:
       - nginx-proxy-net
 
